@@ -360,6 +360,16 @@ public class RestauranteDAO implements IRestauranteDAO {
         DeleteResult result = restauranteCollection.deleteMany(filtro);
         return (int) result.getDeletedCount();
     }
+    
+    /**
+     * Elimina un restaurante específico por su ID.
+     * Utiliza el filtro {@code $eq} para encontrar el documento por su "_id"
+     * y el método {@code deleteOne} para eliminarlo.
+     *
+     * @param id
+     * El ID del restaurante a eliminar. Debe ser una instancia de {@link ObjectId}.
+     * @return {@code true} si la eliminación fue exitosa (se eliminó un documento), {@code false} en caso contrario.
+     */
     @Override
     public boolean eliminarPorID(ObjectId id) {
         Bson filtro = eq("_id", id);
