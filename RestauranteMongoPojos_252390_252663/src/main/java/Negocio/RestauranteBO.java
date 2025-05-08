@@ -1,6 +1,9 @@
 package Negocio;
 
 import Dominio.Restaurante;
+import Persistencia.IRestauranteDAO;
+import Persistencia.PersistenciaException;
+import Persistencia.RestauranteDAO;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.Updates;
@@ -18,10 +21,12 @@ import org.bson.types.ObjectId;
 public class RestauranteBO implements IRestauranteBO{
     // Atributo estático de la clase.
     private static RestauranteBO instance;
+    // Atributo DAO para operaciones con la BD.
+    private final IRestauranteDAO restauranteDAO;
     /**
      * Contructor por defecto.
      */
-    private RestauranteBO(){}
+    private RestauranteBO(){restauranteDAO = new RestauranteDAO();}
     /**
      * Retorna la instancia SingleTon de la clase.
      * Si la instancia aún no existe, se crea.
@@ -38,7 +43,10 @@ public class RestauranteBO implements IRestauranteBO{
      */
     @Override
     public void insertarRestaurantesPorDefecto() throws NegocioException {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        try {
+            restauranteDAO.insertarRestaurantesPorDefecto();
+        } catch (PersistenciaException ex) {
+            throw new NegocioException("Ha ocurrido un error al insertar los restaurantes por defecto;");}
     }
     /**
      * Inserta un nuevo restaurante.
@@ -51,7 +59,12 @@ public class RestauranteBO implements IRestauranteBO{
         validarRestaurante(restaurante);
         // Mapea el nuevo restaurante.
         Restaurante restauranteInsertar = Mapper.toEntity(restaurante);
-        
+        try {
+            // Inserta el nuevo restaurante.
+            restauranteDAO.insertar(restauranteInsertar);
+        } catch (PersistenciaException ex) {
+            throw new NegocioException("Error al insertar el restaurante " + restaurante.getNombre() + ".");
+        }
     }
     /**
      * Inserta una lista de restaurantes.
@@ -67,7 +80,12 @@ public class RestauranteBO implements IRestauranteBO{
             validarRestaurante(restaurante); // Valida el restaurante.
             restaurantesInsertar.add(Mapper.toEntity(restaurante)); // Mapea el restaurante y lo añade a la lista.
         }
-        
+        try {
+            // Inserta los nuevos restaurantes.
+            restauranteDAO.insertarVarios(restaurantesInsertar);
+        } catch (PersistenciaException ex) {
+            throw new NegocioException("Ha ocurrido un error al insertar la lista de restaurantes.");
+        }
     }
     /**
      * Consulta todos los restaurantes.
@@ -78,7 +96,18 @@ public class RestauranteBO implements IRestauranteBO{
     public List<RestauranteDTO> consultarTodos() throws NegocioException {
         // Lista de restaurantes encontrados.
         List<RestauranteDTO> restaurantesEncontrados = new ArrayList<>();
-        
+        try {
+            // Ejecuta la consulta.
+            List<Restaurante> restaurantesEncontradosDAO = restauranteDAO.consultarTodos();
+            // Mapea cada restaurante encontrado y lo añade a la lista de restaurantes encontrados.
+            if(restaurantesEncontradosDAO != null && !restaurantesEncontradosDAO.isEmpty()){
+                for(Restaurante restaurante : restaurantesEncontradosDAO)
+                    restaurantesEncontrados.add(Mapper.toDTO(restaurante));
+            }
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar consultar todos los restaurantes.");
+        }
+        // Regresa la lista de restaurantes obtenidos.
         return restaurantesEncontrados;
     }
     /**
@@ -88,12 +117,23 @@ public class RestauranteBO implements IRestauranteBO{
      * @throws NegocioException Excepción de negocio.
      */
     @Override
-    public List<RestauranteDTO> consultarPorRatingMayor(double valor) throws NegocioException {
+    public List<RestauranteDTO> consultarPorRatingMayorA(double valor) throws NegocioException {
         // Lista de restaurantes encontrados.
         List<RestauranteDTO> restaurantesEncontrados = new ArrayList<>();
         // Filtro para obtener restaurantes cuyo rating es mayor al valor recibido en el parámetro.
         Bson filtro = Filters.gt("rating", valor);
-        
+        try {
+            // Ejecuta la consulta.
+            List<Restaurante> restaurantesEncontradosDAO = restauranteDAO.consultar(filtro);
+            // Mapea cada restaurante encontrado y lo añade a la lista de restaurantes encontrados.
+            if(restaurantesEncontradosDAO != null && !restaurantesEncontradosDAO.isEmpty()){
+                for(Restaurante restaurante : restaurantesEncontradosDAO)
+                    restaurantesEncontrados.add(Mapper.toDTO(restaurante));
+            }
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar consultar restaurantes con rating mayor a " + valor + ".");
+        }
+        // Regresa la lista de restaurantes obtenidos.
         return restaurantesEncontrados;
     }
     /**
@@ -113,7 +153,18 @@ public class RestauranteBO implements IRestauranteBO{
         Bson filtroMax = Filters.lte("rating", max);
         // Filtro para establecer el rango (rating entre ambos límites).
         Bson filtroRango = Filters.and(filtroMin, filtroMax);
-        
+        try {
+            // Ejecuta la consulta.
+            List<Restaurante> restaurantesEncontradosDAO = restauranteDAO.consultar(filtroRango);
+            // Mapea cada restaurante encontrado y lo añade a la lista de restaurantes encontrados.
+            if(restaurantesEncontradosDAO != null && !restaurantesEncontradosDAO.isEmpty()){
+                for(Restaurante restaurante : restaurantesEncontradosDAO)
+                    restaurantesEncontrados.add(Mapper.toDTO(restaurante));
+            }
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar consultar restaurantes con rating entre " + min + " y " + max + ".");
+        }
+        // Regresa la lista de restaurantes obtenidos.
         return restaurantesEncontrados;
     }
     /**
@@ -128,7 +179,18 @@ public class RestauranteBO implements IRestauranteBO{
         List<RestauranteDTO> restaurantesEncontrados = new ArrayList<>();
         // Filtro para obtener restaurantes que tengan la categoría recibida, usando una expresión regular.
         Bson filtroCategoria = Filters.regex("categorias", "^" + categoria + "$", "i");
-        
+        try {
+            // Ejecuta la consulta.
+            List<Restaurante> restaurantesEncontradosDAO = restauranteDAO.consultar(filtroCategoria);
+            // Mapea cada restaurante encontrado y lo añade a la lista de restaurantes encontrados.
+            if(restaurantesEncontradosDAO != null && !restaurantesEncontradosDAO.isEmpty()){
+                for(Restaurante restaurante : restaurantesEncontradosDAO)
+                    restaurantesEncontrados.add(Mapper.toDTO(restaurante));
+            }
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar consultar restaurantes con la categoria " + categoria + ".");
+        }
+        // Regresa la lista de restaurantes obtenidos.
         return restaurantesEncontrados;
     }
     /**
@@ -142,8 +204,19 @@ public class RestauranteBO implements IRestauranteBO{
         // Lista de restaurantes encontrados.
         List<RestauranteDTO> restaurantesEncontrados = new ArrayList<>();
         // Filtro para obtener restaurantes cuyo nombre coincide con la expresión regular recibida.
-        Bson filtro = Filters.regex("nombre", patron);
-        
+        Bson filtroRegex = Filters.regex("nombre", patron);
+        try {
+            // Ejecuta la consulta.
+            List<Restaurante> restaurantesEncontradosDAO = restauranteDAO.consultar(filtroRegex);
+            // Mapea cada restaurante encontrado y lo añade a la lista de restaurantes encontrados.
+            if(restaurantesEncontradosDAO != null && !restaurantesEncontradosDAO.isEmpty()){
+                for(Restaurante restaurante : restaurantesEncontradosDAO)
+                    restaurantesEncontrados.add(Mapper.toDTO(restaurante));
+            }
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar consultar restaurantes cuyo nombre coincide con el patron recibido.");
+        }
+        // Regresa la lista de restaurantes obtenidos.
         return restaurantesEncontrados;
     }
     /**
@@ -159,8 +232,19 @@ public class RestauranteBO implements IRestauranteBO{
         // Filtro para obtener restaurantes que empiezan con el prefijo recibido.
         // El caracter "^" representa el inicio de una línea.
         // La cobinación ".*" representa cualquier caracter, cero o más veces.
-        Bson filtro = Filters.regex("nombre", "^" + prefijo + ".*");
-        
+        Bson filtroPrefijo = Filters.regex("nombre", "^" + prefijo + ".*");
+        try {
+            // Ejecuta la consulta.
+            List<Restaurante> restaurantesEncontradosDAO = restauranteDAO.consultar(filtroPrefijo);
+            // Mapea cada restaurante encontrado y lo añade a la lista de restaurantes encontrados.
+            if(restaurantesEncontradosDAO != null && !restaurantesEncontradosDAO.isEmpty()){
+                for(Restaurante restaurante : restaurantesEncontradosDAO)
+                    restaurantesEncontrados.add(Mapper.toDTO(restaurante));
+            }
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar consultar restaurantes cuyo nombre inicia con ." + prefijo + ".");
+        }
+        // Regresa la lista de restaurantes obtenidos.
         return restaurantesEncontrados;
     }
     /**
@@ -176,15 +260,25 @@ public class RestauranteBO implements IRestauranteBO{
         // Lista de restaurantes encontrados.
         List<RestauranteDTO> restaurantesEncontrados = new ArrayList<>();
         // Filtro para obtener restaurantes inaugurados a partir del año recibido como parámetro.
-        Bson filtro = Filters.gt("fechaInauguracion", LocalDate.ofYearDay(anio, 1));
+        Bson filtroFecha = Filters.gt("fechaInauguracion", LocalDate.ofYearDay(anio, 1));
         // Ordenamiento a ser aplicado en la consulta. Ascendente por default.
         Bson orden = Sorts.ascending("fechaInauguracion");
         // Si el orden recibido es igual a false, se establece un ordenamiento descendente.
         if(ascendente == false)
             orden = Sorts.descending("fechaInauguracion");
-        
-        
-        
+        try {
+            // Ejecuta la consulta.
+            List<Restaurante> restaurantesEncontradosDAO = restauranteDAO.consultarOrden(filtroFecha, orden);
+            // Mapea cada restaurante encontrado y lo añade a la lista de restaurantes encontrados.
+            if(restaurantesEncontradosDAO != null && !restaurantesEncontradosDAO.isEmpty()){
+                for(Restaurante restaurante : restaurantesEncontradosDAO)
+                    restaurantesEncontrados.add(Mapper.toDTO(restaurante));
+            }
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar consultar restaurantes cuya "
+                    + "fecha de inauguracion esta después del anio " + anio + ".");
+        }
+        // Regresa la lista de restaurantes obtenidos.
         return restaurantesEncontrados;
     }
     /**
@@ -199,7 +293,18 @@ public class RestauranteBO implements IRestauranteBO{
         List<RestauranteDTO> restaurantesEncontrados = new ArrayList<>();
         // Filtro para obtener restaurantes que tengan la categoría recibida, usando una expresión regular.
         Bson filtroCategoria = Filters.regex("categorias", "^" + categoria + "$", "i");
-        
+        try {
+            // Ejecuta la consulta.
+            List<Restaurante> restaurantesEncontradosDAO = restauranteDAO.consultarLimite(filtroCategoria, 3);
+            // Mapea cada restaurante encontrado y lo añade a la lista de restaurantes encontrados.
+            if(restaurantesEncontradosDAO != null && !restaurantesEncontradosDAO.isEmpty()){
+                for(Restaurante restaurante : restaurantesEncontradosDAO)
+                    restaurantesEncontrados.add(Mapper.toDTO(restaurante));
+            }
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar consultar el top 3 de restaurantes con la categoria " + categoria + ".");
+        }
+        // Regresa la lista de restaurantes obtenidos.
         return restaurantesEncontrados;
     }
     /**
@@ -213,7 +318,18 @@ public class RestauranteBO implements IRestauranteBO{
         List<RestauranteDTO> restaurantesEncontrados = new ArrayList<>();
         // Filtro para obtener restaurantes sin categorías.
         Bson filtroSinCategorias = Filters.exists("categorias", false);
-        
+        try {
+            // Ejecuta la consulta.
+            List<Restaurante> restaurantesEncontradosDAO = restauranteDAO.consultar(filtroSinCategorias);
+            // Mapea cada restaurante encontrado y lo añade a la lista de restaurantes encontrados.
+            if(restaurantesEncontradosDAO != null && !restaurantesEncontradosDAO.isEmpty()){
+                for(Restaurante restaurante : restaurantesEncontradosDAO)
+                    restaurantesEncontrados.add(Mapper.toDTO(restaurante));
+            }
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar consultar restaurantes sin categorias.");
+        }
+        // Regresa la lista de restaurantes obtenidos.
         return restaurantesEncontrados;
     }
     /**
@@ -228,7 +344,17 @@ public class RestauranteBO implements IRestauranteBO{
         RestauranteDTO restauranteEncontrado = new RestauranteDTO();
         // Filtro para obtener un restaurante cuyo nombre sea igual al nombre recibido en el parámetro. 
         Bson filtroNombre = Filters.eq("nombre", nombre);
-        
+        try {
+            // Ejecuta la consulta.
+            List<Restaurante> restaurantesEncontradosDAO = restauranteDAO.consultar(filtroNombre);
+            // Mapea cada restaurante encontrado y lo añade a la lista de restaurantes encontrados.
+            if(restaurantesEncontradosDAO != null && !restaurantesEncontradosDAO.isEmpty()){
+                restauranteEncontrado = Mapper.toDTO(restaurantesEncontradosDAO.getFirst());
+            }
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar consultar el restaurante " + nombre + ".");
+        }
+        // Regresa la lista de restaurantes obtenidos.
         return restauranteEncontrado;
     }
      /**
@@ -244,8 +370,12 @@ public class RestauranteBO implements IRestauranteBO{
         Bson filtroNombre = Filters.eq("nombre", nombre);
         // Actualiza el rating del restaurante encontrado al valor recibido en el parámetro.
         Bson actualizacion = Updates.set("rating", nuevoRating);
-        
-        return true;
+        try {
+            // Ejecuta la actualización.
+            return restauranteDAO.actualizar(filtroNombre, actualizacion);
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar actualizar el rating del restaurante " + nombre + ".");
+        }
     }
     /**
      * Agrega una nueva categoría a un restaurante.
@@ -262,10 +392,16 @@ public class RestauranteBO implements IRestauranteBO{
         Bson filtroCategoria = Filters.regex("categorias", "^" + nuevaCategoria + "$", "i");
         // Filtro para obtener restaurantes que no tengan la categoría recibida, negando el filtro anterior.
         Bson filtroNoCategoria = Filters.not(filtroCategoria);
+        // Filtro que garantiza que se apliquen los dos filtros anteriores.
+        Bson filtroNombreNoCategoria = Filters.and(filtroNombre, filtroNoCategoria);
         // Agrega la nueva categoría al restaurante encontrado.
-        Bson agregarCategoria = Updates.addToSet("categorias", "Mexicana");
-        
-        return true;
+        Bson agregarCategoria = Updates.addToSet("categorias", nuevaCategoria);
+        try {
+            // Ejecuta la actualización.
+            return restauranteDAO.actualizar(filtroNombreNoCategoria, agregarCategoria);
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar agregar la categoria " + nuevaCategoria + " al restaurante " + nombre + ".");
+        }
     }
     /**
      * Incrementa el rating de uno o varios restaurantes por categoría.
@@ -280,8 +416,12 @@ public class RestauranteBO implements IRestauranteBO{
         Bson filtroCategoria = Filters.regex("categorias", "^" + categoria + "$", "i");
         // Incrementa el rating de los restaurantes encontrados al incremento recibido.
         Bson incrementar = Updates.inc("rating", incremento);
-        
-        return true;
+        try {
+            // Ejecuta la actualización.
+            return restauranteDAO.actualizar(filtroCategoria, incrementar);
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar incrementar el rating en " + incremento + " a los restaurantes de categoria " + categoria + ".");
+        }
     }
     /**
      * Incrementa el rating de un restaurante por su nombre.
@@ -296,8 +436,12 @@ public class RestauranteBO implements IRestauranteBO{
         Bson filtroNombre = Filters.eq("nombre", nombre);
         // Incrementa el rating de los restaurantes encontrados al incremento recibido.
         Bson incrementar = Updates.inc("rating", incremento);
-        
-        return true;
+        try {
+            // Ejecuta la actualización.
+            return restauranteDAO.actualizar(filtroNombre, incrementar);
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar incrementar el rating en " + incremento + " al restaurante  " + nombre + ".");
+        }
     }
     /**
      * Agrega una lista de categorías a restaurantes que no cuentan con ninguna.
@@ -311,8 +455,19 @@ public class RestauranteBO implements IRestauranteBO{
         Bson filtroSinCategorias = Filters.exists("categorias", false);
         // Actualización para agregar las nuevas categorías recibidas.
         Bson agregarCategorias = Updates.set("categorias", categorias);
-        
-        return 0;
+        try {
+            // Ejecuta la actualización.
+            long resultado = restauranteDAO.actualizarConteo(filtroSinCategorias, agregarCategorias);
+            // Se asegura de que el resultado no sea mayor que la capacidad de un int
+            if(resultado > Integer.MAX_VALUE)
+                throw new NegocioException("El valor del resultado es demasiado grande. No sé por qué devuelve int si el método Result devuelve long, o sea.");
+            else
+                // Se castea el resultado a int y se retorna.
+                return (int) resultado;
+            
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar agregar las nuevas categorías a restaurantes sin categorias.");
+        }
     }
     /**
      * Actualiza el nombre de un restaurante.
@@ -327,8 +482,12 @@ public class RestauranteBO implements IRestauranteBO{
         Bson filtroNombre = Filters.eq("nombre", anterior);
         // Actualización para establecer el nombre del restaurante al nuevo nombre recibido en el parámetro.
         Bson cambiarNombre = Updates.set("nombre", nuevo);
-        
-        return true;
+        try {
+            // Ejecuta la actualización.
+            return restauranteDAO.actualizar(filtroNombre, cambiarNombre);
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar actualizar el nombre a " + nuevo + " del restaurante " + anterior + ".");
+        }
     }
     /**
      * Actualiza las categorías de un restaurante (reemplaza las previas).
@@ -343,8 +502,12 @@ public class RestauranteBO implements IRestauranteBO{
         Bson filtroNombre = Filters.eq("nombre", nombre);
         // Actualización que establece las categorías del restaurante obtenido por las nuevas categorías recibidas en el parámetro.
         Bson cambiarCategorias = Updates.set("categorias", categorias);
-        
-        return true;
+        try {
+            // Ejecuta la actualización.
+            return restauranteDAO.actualizar(filtroNombre, cambiarCategorias);
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar actualizar las categorias del restaurante " + nombre + ".");
+        }
     }
     /**
      * Elimina un restaurante por su nombre.
@@ -356,8 +519,12 @@ public class RestauranteBO implements IRestauranteBO{
     public boolean eliminarPorNombre(String nombre) throws NegocioException {
         // Filtro para obtener un restaurante cuyo nombre sea igual al nombre recibido en el parámetro. 
         Bson filtroNombre = Filters.eq("nombre", nombre);
-        
-        return true;
+        try {
+            // Ejecuta la eliminación.
+            return restauranteDAO.eliminar(filtroNombre);
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar eliminar el restaurante " + nombre + ".");
+        }
     }
     /**
      * Elimina restaurantes cuyo rating es menor al valor recibido.
@@ -369,8 +536,18 @@ public class RestauranteBO implements IRestauranteBO{
     public int eliminarPorRatingMenorA(double limite) throws NegocioException {
         // Filtro para eliminar todos los restaurantes cuyo rating sea menor que el valor recibido en el parámetro.
         Bson filtroRating = Filters.lt("rating", limite);
-        
-        return 0;
+        try {
+            // Ejecuta la eliminación.
+            long resultado = restauranteDAO.eliminarConteo(filtroRating);
+            // Se asegura de que el resultado no sea mayor que la capacidad de un int
+            if(resultado > Integer.MAX_VALUE)
+                throw new NegocioException("El valor del resultado es demasiado grande. No sé por qué devuelve int si el método Result devuelve long, o sea.");
+            else
+                // Se castea el resultado a int y se retorna.
+                return (int) resultado;
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar eliminar restaurantes con rating menor a " + limite + ".");
+        }
     }
     /**
      * Elimina restaurantes que contengan la categoría recibida.
@@ -382,8 +559,18 @@ public class RestauranteBO implements IRestauranteBO{
     public int eliminarPorCategoria(String categoria) throws NegocioException {
         // Filtro para obtener restaurantes que tengan la categoría recibida en el parámetro, usando una expresión regular.
         Bson filtroCategoria = Filters.regex("categorias", "^" + categoria + "$", "i");
-        
-        return 0;
+        try {
+            // Ejecuta la eliminación.
+            long resultado = restauranteDAO.eliminarConteo(filtroCategoria);
+            // Se asegura de que el resultado no sea mayor que la capacidad de un int
+            if(resultado > Integer.MAX_VALUE)
+                throw new NegocioException("El valor del resultado es demasiado grande. No sé por qué devuelve int si el método Result devuelve long, o sea.");
+            else
+                // Se castea el resultado a int y se retorna.
+                return (int) resultado;
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar eliminar restaurantes con la categoria " + categoria + ".");
+        }
     }
     /**
      * Elmina restaurantes que no tengan fecha de inauguración.
@@ -393,9 +580,19 @@ public class RestauranteBO implements IRestauranteBO{
     @Override
     public int eliminarSinFechaInauguracion() throws NegocioException {
         // Filtro para obtener restaurantes sin fecha de inauguracion.
-        Bson filtroFecha = Filters.exists("fecha_inauguracion", false);
-        
-        return 0;
+        Bson filtroFecha = Filters.exists("fechaInauguracion", false);
+        try {
+            // Ejecuta la eliminación.
+            long resultado = restauranteDAO.eliminarConteo(filtroFecha);
+            // Se asegura de que el resultado no sea mayor que la capacidad de un int
+            if(resultado > Integer.MAX_VALUE)
+                throw new NegocioException("El valor del resultado es demasiado grande. No sé por qué devuelve int si el método Result devuelve long, o sea.");
+            else
+                // Se castea el resultado a int y se retorna.
+                return (int) resultado;
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar eliminar restaurantes sin fecha de inauguracion.");
+        }
     }
     /**
      * Elimina unn restaurante por su ID.
@@ -406,9 +603,13 @@ public class RestauranteBO implements IRestauranteBO{
     @Override
     public boolean eliminarPorID(String id) throws NegocioException {
         // Filtro para el ID. Convierte el String recibido en un objeto ObjectId.
-        Bson filtroID = Filters.eq("id", new ObjectId(id));
-        
-        return true;
+        Bson filtroID = Filters.eq("_id", new ObjectId(id));
+        try {
+            // Ejecuta la eliminación.
+            return restauranteDAO.eliminar(filtroID);
+        } catch (PersistenciaException e) {
+            throw new NegocioException("Ha ocurrido un error al intentar eliminar el restaurante con id" + id + ".");
+        }
     }
     /**
      * Valida un restaurante.
@@ -428,7 +629,5 @@ public class RestauranteBO implements IRestauranteBO{
         // Si la fecha de inauguración del restaurante no está vacía y está después de la fecha actual.
         if(restauranteDTO.getFechaInauguracion() != null && restauranteDTO.getFechaInauguracion().isAfter(LocalDate.now()))
             throw new NegocioException("La fecha de inauguración no puede ser posterior a la fecha actual.");
-        
     }
-    
 }

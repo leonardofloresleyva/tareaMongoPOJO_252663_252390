@@ -44,5 +44,12 @@ public class Conexion {
             return mongoClient.getDatabase(DBName).withCodecRegistry(pojoCodecRegistry);
         }
       return mongoClient.getDatabase(DBName);
-    }   
+    }
+    /**
+     * Cierra la conexión con la base de datos.
+     */
+    public static void cerrarConexion(){
+        if(mongoClient != null)
+            mongoClient.close();
+    }
 }

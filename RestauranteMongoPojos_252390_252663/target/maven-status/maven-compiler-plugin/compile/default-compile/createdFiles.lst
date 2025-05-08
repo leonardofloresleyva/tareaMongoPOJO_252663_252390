@@ -1,7 +1,9 @@
 Dominio\Restaurante.class
 Negocio\RestauranteBO.class
 Presentacion\PresentacionException.class
+Persistencia\IRestauranteDAO.class
 Persistencia\PersistenciaException.class
+Persistencia\RestauranteDAO.class
 Negocio\RestauranteDTO.class
 Conexion\Conexion.class
 Presentacion\RestauranteMongoPojos.class

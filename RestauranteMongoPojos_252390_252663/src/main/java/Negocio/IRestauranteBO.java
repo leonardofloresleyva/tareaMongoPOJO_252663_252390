@@ -41,7 +41,7 @@ public interface IRestauranteBO {
      * @return Lista con restaurantes encontrados.
      * @throws NegocioException Excepción de negocio.
      */
-    public List<RestauranteDTO> consultarPorRatingMayor(double valor) throws NegocioException;
+    public List<RestauranteDTO> consultarPorRatingMayorA(double valor) throws NegocioException;
     /**
      * Consulta restaurantes cuyo rating se encuentra dentro del rango recibido.
      * @param min Límite inferior.

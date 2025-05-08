@@ -10,6 +10,7 @@ import java.util.List;
  */
 public class RestauranteDTO {
     // Atributos de un restaurante.
+    private String id;
     private String nombre;
     private LocalDate fechaInauguracion;
     private Double rating;
@@ -21,22 +22,35 @@ public class RestauranteDTO {
     /**
      * Constructor que recibe todos los atributos de
      * un restaurante.
+     * @param id ID del restaurante.
      * @param nombre Nombre del restaurante.
      * @param fechaInauguracion Fecha de inauguración del restaurante.
      * @param rating Rating del restaurante.
      * @param categorias Categorías del restaurante.
      */
     public RestauranteDTO(
+            String id,
             String nombre, 
             LocalDate fechaInauguracion, 
             Double rating, 
             List<String> categorias
     ) {
+        this.id = id;
         this.nombre = nombre;
         this.fechaInauguracion = fechaInauguracion;
         this.rating = rating;
         this.categorias = categorias;
     }
+    /**
+     * Retorna el ID del restaurante.
+     * @return ID del restaurante.
+     */
+    public String getId() {return id;}
+    /**
+     * Establece el ID del restaurante.
+     * @param id Nuevo ID del restaurante.
+     */
+    public void setId(String id) {this.id = id;}
     /**
      * Retorna el nombre del restaurante.
      * @return Nombre del restaurante.
